@@ -3,6 +3,9 @@ import type {
   OrchestrateResponse,
   Product,
   ProductCreate,
+  ResearchJobCreate,
+  ResearchJobRead,
+  ResearchJobSummary,
   Task,
 } from "./types";
 
@@ -39,6 +42,15 @@ export const api = {
         body: JSON.stringify(req),
       }),
     getTask: (id: number) => request<Task>(`/orchestrate/tasks/${id}`),
+  },
+
+  research: {
+    create: (data: ResearchJobCreate) =>
+      request<ResearchJobRead>("/research", { method: "POST", body: JSON.stringify(data) }),
+    list: (offset = 0, limit = 50) =>
+      request<ResearchJobSummary[]>(`/research?offset=${offset}&limit=${limit}`),
+    get: (id: number) => request<ResearchJobRead>(`/research/${id}`),
+    delete: (id: number) => request<void>(`/research/${id}`, { method: "DELETE" }),
   },
 
   health: {

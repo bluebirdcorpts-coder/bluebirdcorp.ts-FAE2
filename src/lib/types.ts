@@ -1,3 +1,61 @@
+// === Research (AI Employee) ===
+
+export type ResearchStatus = "pending" | "scheduled" | "running" | "completed" | "failed";
+export type SaveTarget = "db" | "sheets" | "both";
+
+export interface ResearchJobCreate {
+  topic: string;
+  scheduled_at?: string | null; // ISO 8601
+  save_target: SaveTarget;
+}
+
+export interface ResearchConcept {
+  name: string;
+  tagline: string;
+  description: string;
+  target_segment: string;
+  key_features: string[];
+  revenue_model: string;
+}
+
+export interface ResearchValidationEval {
+  concept_index: number;
+  feasibility_score: number;
+  market_fit_score: number;
+  risks: string[];
+  mitigations: string[];
+  verdict: "go" | "pivot" | "drop";
+}
+
+export interface ResearchJobRead {
+  id: number;
+  topic: string;
+  status: ResearchStatus;
+  save_target: SaveTarget;
+  result_research: Record<string, unknown> | null;
+  result_ideation: { concepts: ResearchConcept[]; recommended_concept: number } | null;
+  result_validation: { evaluations: ResearchValidationEval[]; final_recommendation: string } | null;
+  result_prd: string | null;
+  search_sources: { title: string; url: string; content: string }[] | null;
+  saved_to_sheets: boolean;
+  sheets_url: string | null;
+  error: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ResearchJobSummary {
+  id: number;
+  topic: string;
+  status: ResearchStatus;
+  saved_to_sheets: boolean;
+  sheets_url: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
 // === Product ===
 
 export type ProductStatus = "draft" | "active" | "archived" | "under_review";
