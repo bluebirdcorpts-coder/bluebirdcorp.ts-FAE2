@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐦 Bluebird B-APO — AI 상품기획 대시보드</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+/* ── 기본 리셋 & 변수 ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #0a0f1e;
+  --surface:   #111827;
+  --surface2:  #1e293b;
+  --border:    #1e3a5f;
+  --accent:    #3b82f6;
+  --accent2:   #6366f1;
+  --green:     #22c55e;
+  --yellow:    #f59e0b;
+  --red:       #ef4444;
+  --purple:    #a855f7;
+  --text:      #f1f5f9;
+  --muted:     #64748b;
+  --radius:    12px;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── 배경 그리드 패턴 ─────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ── 키프레임 ─────────────────────────────────────────────── */
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 10px rgba(59,130,246,.4), 0 0 20px rgba(59,130,246,.2); }
+  50%      { box-shadow: 0 0 22px rgba(59,130,246,.8), 0 0 45px rgba(59,130,246,.4); }
+}
+@keyframes greenGlow {
+  0%,100% { box-shadow: 0 0 10px rgba(34,197,94,.4); }
+  50%      { box-shadow: 0 0 24px rgba(34,197,94,.7); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulseDot {
+  0%,80%,100% { transform: scale(0); opacity:.3; }
+  40%          { transform: scale(1); opacity:1; }
+}
+@keyframes slideInLeft {
+  from { opacity:0; transform: translateX(-14px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+@keyframes fadeInUp {
+  from { opacity:0; transform: translateY(16px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes flowLine {
+  0%   { stroke-dashoffset: 60; opacity:.4; }
+  50%  { opacity:1; }
+  100% { stroke-dashoffset: 0; opacity:.4; }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes typing {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes headerGlow {
+  0%,100% { opacity:.6; }
+  50%      { opacity:1; }
+}
+@keyframes particlePop {
+  0%   { transform: scale(0) translateY(0); opacity:1; }
+  100% { transform: scale(1.5) translateY(-30px); opacity:0; }
+}
+
+/* ── 헤더 ─────────────────────────────────────────────────── */
+.header {
+  position: relative; z-index: 1;
+  background: linear-gradient(135deg, #060d1f 0%, #0d1b3e 50%, #060d1f 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.header-glow {
+  position: absolute; top:0; left:50%; transform: translateX(-50%);
+  width: 60%; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+  animation: headerGlow 3s ease-in-out infinite;
+}
+.logo { display:flex; align-items:center; gap:12px; }
+.logo-icon {
+  width:44px; height:44px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:22px;
+}
+.logo-text h1 { font-size:18px; font-weight:800; letter-spacing:-.3px; }
+.logo-text p  { font-size:11px; color:var(--muted); margin-top:1px; }
+.mode-toggle {
+  display:flex; align-items:center; gap:8px;
+  background: var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:4px;
+}
+.mode-btn {
+  padding:6px 14px; border-radius:6px; border:none; cursor:pointer;
+  font-size:12px; font-weight:600; transition: all .2s;
+  color: var(--muted); background: transparent;
+}
+.mode-btn.active { background: var(--accent); color:#fff; }
+.status-dot {
+  width:8px; height:8px; border-radius:50%; background:#555;
+  transition: background .3s;
+}
+.status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ── 메인 레이아웃 ───────────────────────────────────────── */
+.main { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:40px 24px 80px; }
+
+/* ── 검색창 ─────────────────────────────────────────────── */
+.search-section { text-align:center; margin-bottom:48px; }
+.search-title { font-size:28px; font-weight:800; margin-bottom:8px;
+  background: linear-gradient(135deg, #fff 30%, var(--accent));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.search-subtitle { font-size:14px; color:var(--muted); margin-bottom:28px; }
+.search-box {
+  display:flex; gap:10px; max-width:680px; margin:0 auto;
+  background: var(--surface); border:1.5px solid var(--border);
+  border-radius:14px; padding:6px 6px 6px 20px;
+  transition: border-color .3s, box-shadow .3s;
+}
+.search-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.search-input {
+  flex:1; background:transparent; border:none; outline:none;
+  font-size:15px; color:var(--text);
+}
+.search-input::placeholder { color:var(--muted); }
+.search-btn {
+  padding:10px 24px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border:none; border-radius:10px; color:#fff; font-size:14px; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; gap:8px;
+  transition: opacity .2s, transform .1s;
+  white-space: nowrap;
+}
+.search-btn:hover:not(:disabled) { opacity:.9; transform: scale(1.02); }
+.search-btn:disabled { opacity:.5; cursor:not-allowed; }
+.search-chips { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
+.chip {
+  padding:5px 14px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:20px; font-size:12px; color:var(--muted); cursor:pointer;
+  transition: all .2s;
+}
+.chip:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── 파이프라인 ─────────────────────────────────────────── */
+.pipeline-section { margin-bottom:40px; animation: fadeInUp .5s ease; }
+.section-label {
+  font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:20px;
+  display:flex; align-items:center; gap:8px;
+}
+.section-label::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+.pipeline {
+  display:flex; align-items:flex-start; gap:0;
+  overflow-x: auto; padding-bottom: 4px;
+}
+
+/* ── 에이전트 카드 ─────────────────────────────────────── */
+.agent-wrap { display:flex; align-items:center; }
+.agent-card {
+  width:200px; min-width:180px;
+  background: var(--surface); border:1.5px solid var(--border);
+  border-radius:var(--radius); padding:20px 16px 16px;
+  position:relative; transition: all .4s; flex-shrink:0;
+}
+.agent-card.waiting { border-color: #1e3a5f; opacity:.65; }
+.agent-card.running {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #0d1b3e, #111827);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+.agent-card.done {
+  border-color: var(--green);
+  animation: greenGlow 3s ease-in-out infinite;
+}
+.agent-card.error { border-color: var(--red); }
+
+.agent-badge {
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700;
+  white-space:nowrap;
+}
+.badge-waiting  { background:#1e293b; color:var(--muted); border:1px solid var(--border); }
+.badge-running  { background:var(--accent); color:#fff; }
+.badge-done     { background:var(--green);  color:#fff; }
+.badge-error    { background:var(--red);    color:#fff; }
+
+.agent-icon-wrap { position:relative; width:48px; height:48px; margin:8px auto 12px; }
+.agent-icon {
+  width:100%; height:100%; background: var(--surface2);
+  border-radius:12px; display:flex; align-items:center;
+  justify-content:center; font-size:24px;
+}
+.agent-card.running .agent-icon { animation: spin 3s linear infinite; }
+.agent-spinner {
+  position:absolute; inset:-4px;
+  border:2px solid transparent; border-top-color:var(--accent);
+  border-radius:50%; animation: spin .8s linear infinite;
+}
+
+.agent-name { font-size:13px; font-weight:700; text-align:center; margin-bottom:3px; }
+.agent-role { font-size:10px; color:var(--muted); text-align:center; margin-bottom:12px; }
+.agent-status-text {
+  font-size:11px; color:var(--muted); text-align:center;
+  min-height:16px;
+}
+.agent-card.running .agent-status-text { color: var(--accent); }
+.agent-card.done    .agent-status-text { color: var(--green); }
+
+/* 생각 점 애니메이션 */
+.thinking-dots { display:flex; gap:4px; justify-content:center; margin-top:8px; }
+.dot {
+  width:6px; height:6px; border-radius:50%; background:var(--accent);
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+.dot:nth-child(1) { animation-delay:.0s; }
+.dot:nth-child(2) { animation-delay:.2s; }
+.dot:nth-child(3) { animation-delay:.4s; }
+
+/* 완료 체크 */
+.check-icon {
+  width:28px; height:28px; background:var(--green); border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  margin:8px auto 0; font-size:14px;
+  animation: fadeInUp .3s ease;
+}
+
+/* ── 연결 화살표 ─────────────────────────────────────── */
+.connector { flex-shrink:0; display:flex; align-items:center; padding:0 4px; margin-top:20px; }
+.connector svg { overflow:visible; }
+.conn-line { transition: stroke .4s; }
+.conn-line.active { stroke: var(--accent); }
+.conn-line.done   { stroke: var(--green); }
+.conn-arrow { transition: fill .4s; }
+.conn-arrow.active { fill: var(--accent); }
+.conn-arrow.done   { fill: var(--green); }
+.conn-anim { animation: flowLine 1.2s linear infinite; }
+
+/* ── 진행 바 ─────────────────────────────────────────── */
+.progress-bar-wrap { margin-top:6px; }
+.progress-bar {
+  height:3px; background:var(--surface2); border-radius:2px; overflow:hidden;
+}
+.progress-fill {
+  height:100%; border-radius:2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 1s linear;
+}
+
+/* ── 로그 패널 ─────────────────────────────────────── */
+.log-section { margin-bottom:36px; animation: fadeInUp .5s ease .1s both; }
+.log-panel {
+  background: #060d1f; border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden;
+}
+.log-header {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 16px; background:var(--surface);
+  border-bottom:1px solid var(--border);
+  font-size:12px; font-weight:700; color:var(--muted);
+}
+.log-dot { width:8px; height:8px; border-radius:50%; }
+.log-body {
+  height:160px; overflow-y:auto; padding:12px 16px;
+  font-family: 'Courier New', monospace; font-size:12px; line-height:1.8;
+  scroll-behavior: smooth;
+}
+.log-body::-webkit-scrollbar { width:4px; }
+.log-body::-webkit-scrollbar-track { background:#0a0f1e; }
+.log-body::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+.log-line {
+  display:flex; gap:10px; align-items:flex-start;
+  animation: slideInLeft .25s ease;
+  opacity: 0; animation-fill-mode: forwards;
+}
+.log-time { color:#334155; flex-shrink:0; }
+.log-agent-tag { border-radius:4px; padding:0 5px; font-size:10px; font-weight:700; flex-shrink:0; }
+.log-msg { color:#94a3b8; }
+.log-msg.highlight { color:#e2e8f0; }
+.log-cursor { color:var(--accent); animation: pulseDot 1s ease-in-out infinite; }
+
+/* ── 결과 섹션 ─────────────────────────────────────── */
+.results-section { display:flex; flex-direction:column; gap:12px; }
+.result-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden;
+  animation: fadeInUp .4s ease;
+}
+.result-header {
+  display:flex; align-items:center; gap:10px; padding:14px 18px;
+  cursor:pointer; user-select:none; transition:background .2s;
+}
+.result-header:hover { background:var(--surface2); }
+.result-icon { font-size:18px; }
+.result-title { font-size:14px; font-weight:700; flex:1; }
+.result-chevron { color:var(--muted); transition:transform .3s; }
+.result-chevron.open { transform:rotate(180deg); }
+.result-body { padding:0 18px 18px; border-top:1px solid var(--border); }
+
+/* 결과 내부 스타일 */
+.kv-row { display:flex; gap:8px; margin-bottom:6px; font-size:13px; }
+.kv-label { color:var(--muted); flex-shrink:0; min-width:90px; }
+.kv-val { color:var(--text); }
+.tag-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.tag {
+  padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;
+}
+.tag-blue   { background:rgba(59,130,246,.15); color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+.tag-green  { background:rgba(34,197,94,.15);  color:#86efac; border:1px solid rgba(34,197,94,.3); }
+.tag-red    { background:rgba(239,68,68,.15);  color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+.tag-yellow { background:rgba(245,158,11,.15); color:#fcd34d; border:1px solid rgba(245,158,11,.3); }
+.tag-purple { background:rgba(168,85,247,.15); color:#d8b4fe; border:1px solid rgba(168,85,247,.3); }
+
+.concept-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:12px; }
+.concept-card {
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:10px; padding:14px;
+}
+.concept-card.recommended {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #0d1b3e, #111827);
+}
+.concept-name { font-weight:700; font-size:14px; margin-bottom:3px; }
+.concept-tagline { font-size:11px; color:var(--muted); font-style:italic; margin-bottom:8px; }
+.concept-desc { font-size:12px; color:#94a3b8; line-height:1.5; margin-bottom:8px; }
+
+.eval-row {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; background:var(--surface2); border-radius:8px; margin-bottom:8px;
+}
+.eval-name { font-size:13px; font-weight:600; min-width:80px; }
+.score-bar-wrap { flex:1; }
+.score-bar {
+  height:6px; background:#1e293b; border-radius:3px; overflow:hidden; margin-bottom:3px;
+}
+.score-fill { height:100%; border-radius:3px; transition: width .8s ease; }
+.score-label { font-size:10px; color:var(--muted); display:flex; justify-content:space-between; }
+.verdict {
+  padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700;
+  flex-shrink:0;
+}
+.verdict-go     { background:rgba(34,197,94,.2);  color:var(--green); }
+.verdict-pivot  { background:rgba(245,158,11,.2); color:var(--yellow); }
+.verdict-drop   { background:rgba(239,68,68,.2);  color:var(--red); }
+
+.prd-text {
+  white-space:pre-wrap; font-family:'Courier New', monospace;
+  font-size:12px; color:#94a3b8; line-height:1.9;
+  background:#060d1f; border-radius:8px; padding:16px;
+  max-height:400px; overflow-y:auto;
+  border:1px solid var(--border);
+}
+.prd-text::-webkit-scrollbar { width:4px; }
+.prd-text::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+
+.btn-row { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+.action-btn {
+  padding:8px 18px; border-radius:8px; border:1px solid var(--border);
+  background:var(--surface2); color:var(--text); font-size:12px; font-weight:600;
+  cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .2s;
+}
+.action-btn:hover { border-color:var(--accent); color:var(--accent); }
+.action-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.action-btn.primary:hover { opacity:.9; }
+
+/* ── 빈 상태 ─────────────────────────────────────────── */
+.empty-state {
+  text-align:center; padding:60px 20px; color:var(--muted);
+  animation: fadeInUp .5s ease;
+}
+.empty-icon { font-size:64px; margin-bottom:16px; opacity:.4; }
+.empty-title { font-size:18px; font-weight:700; margin-bottom:8px; color:#475569; }
+.empty-sub { font-size:13px; }
+
+/* ── 타이핑 효과 태그 ─────────────────────────────────── */
+.shimmer-text {
+  background: linear-gradient(90deg, var(--muted) 0%, #e2e8f0 50%, var(--muted) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── 반응형 ──────────────────────────────────────────── */
+@media(max-width:700px){
+  .header { padding:14px 16px; }
+  .main { padding:24px 12px 60px; }
+  .search-title { font-size:20px; }
+  .pipeline { gap:0; }
+  .agent-card { width:140px; min-width:130px; padding:14px 10px 12px; }
+  .agent-name { font-size:11px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ══════════════════════════════════════════════════════════════
+// 상수 & 설정
+// ══════════════════════════════════════════════════════════════
+
+const API_BASE = 'http://localhost:8000/api/v1';
+
+const AGENTS = [
+  { id:'research',   icon:'🔎', name:'시장 조사',   role:'Market Research Agent',  color:'#3b82f6' },
+  { id:'ideation',   icon:'💡', name:'아이디어 기획', role:'Product Ideation Agent', color:'#a855f7' },
+  { id:'validation', icon:'✅', name:'검증·비판',   role:'Validation Agent',       color:'#f59e0b' },
+  { id:'prd',        icon:'📄', name:'PRD 작성',    role:'PRD Writer Agent',       color:'#22c55e' },
+];
+
+const AGENT_LOGS = {
+  research: [
+    t => `Tavily 검색 API 연결 중...`,
+    t => `쿼리 실행: "${t}"`,
+    t => `쿼리 실행: "${t} 시장 동향 2025"`,
+    t => `쿼리 실행: "${t} 경쟁사 분석"`,
+    t => `검색 결과 12건 수집 완료`,
+    t => `시장 규모 및 성장률 데이터 추출 중...`,
+    t => `핵심 트렌드 키워드 분석 중...`,
+    t => `타겟 고객 세그먼트 식별 중...`,
+    t => `Pain Point 목록 정리 중...`,
+    t => `시장 조사 보고서 작성 완료 ✓`,
+  ],
+  ideation: [
+    t => `시장 조사 결과 수신 완료`,
+    t => `Pain Point 기반 컨셉 도출 시작...`,
+    t => `[컨셉 A] 메인 아이디어 생성 중...`,
+    t => `[컨셉 A] 핵심 기능 목록 정의 중...`,
+    t => `[컨셉 B] 메인 아이디어 생성 중...`,
+    t => `[컨셉 C] 메인 아이디어 생성 중...`,
+    t => `3가지 컨셉 차별화 포인트 비교 중...`,
+    t => `수익 모델 검토 중...`,
+    t => `최적 컨셉 추천 완료 ✓`,
+  ],
+  validation: [
+    t => `3개 컨셉 검증 시작...`,
+    t => `[컨셉 A] 실현 가능성 (0~1.0) 분석 중...`,
+    t => `[컨셉 A] 시장 적합성 평가 중...`,
+    t => `[컨셉 B] 리스크 요인 분석 중...`,
+    t => `[컨셉 C] 경쟁 우위 분석 중...`,
+    t => `GO / PIVOT / DROP 판정 중...`,
+    t => `최종 추천 사항 작성 중...`,
+    t => `검증 완료 ✓`,
+  ],
+  prd: [
+    t => `검증된 컨셉 수신...`,
+    t => `PRD 문서 구조 설계 중...`,
+    t => `문제 정의(Problem Statement) 작성 중...`,
+    t => `핵심 기능 P0/P1/P2 우선순위 정의 중...`,
+    t => `목표 고객 및 시장 분석 반영 중...`,
+    t => `성공 지표(KPI) 설정 중...`,
+    t => `Phase 1/2/3 출시 로드맵 작성 중...`,
+    t => `리스크 분석 및 완화 방안 작성 중...`,
+    t => `PRD 문서 최종 완성 ✓`,
+  ],
+};
+
+const EXAMPLE_TOPICS = [
+  '2025 AI 헬스케어 웨어러블',
+  '국내 반려동물 스마트 IoT',
+  '친환경 모빌리티 구독 서비스',
+  'B2B 물류 자동화 솔루션',
+];
+
+// ── 데모 목 데이터 ─────────────────────────────────────────
+const MOCK = {
+  research: {
+    market_overview:"2025년 국내 스마트홈 IoT 시장은 약 4.2조원 규모로 전년 대비 23% 성장 중. AI 음성 제어와 에너지 효율 솔루션 수요 급증.",
+    market_size_estimate:"국내 4.2조원 (2025), 연 23% 성장. 2028년 8.9조원 예상.",
+    target_customers:["30-40대 맞벌이 부부","에너지 절감 관심 1-2인 가구","반려동물 보유 가구"],
+    key_trends:["AI 음성 제어 통합","에너지 효율·탄소 절감","Matter 표준 기기 호환","보안·프라이버시 강화"],
+    pain_points:["복잡한 초기 설정","기기 간 호환성 문제","높은 초기 도입 비용","불안정한 연결 신뢰성"],
+    opportunities:["원스톱 AI 허브 솔루션","에너지 관리 구독 서비스","B2B 오피스·호텔 버티컬","해외 동남아 시장 확장"],
+  },
+  ideation: {
+    concepts:[
+      { name:"Bluebird HomeOS", tagline:"하나의 앱으로 모든 가전을 AI가 자동 제어",
+        description:"기존 가전제품과 연동하는 AI 허브 디바이스 + 앱 플랫폼. 복잡한 설정 없이 자연어로 모든 기기 제어.",
+        target_segment:"30-40대 맞벌이 부부, 스마트홈 입문자",
+        key_features:["자연어 음성 제어 (Claude AI)","기기 자동 발견·원클릭 연동","에너지 사용 AI 최적화"],
+        revenue_model:"하드웨어 ₩89,000 + 월정액 AI 서비스 ₩9,900" },
+      { name:"EcoGuard Pro", tagline:"에너지 사용을 30% 줄이는 AI 관리자",
+        description:"전기·가스 실시간 모니터링 + AI 자동 절약 솔루션. B2B 오피스·상가 타겟.",
+        target_segment:"에너지 비용 절감 관심 고객, 중소 사업자",
+        key_features:["실시간 에너지 대시보드","AI 이상 감지 알림","탄소 발자국 리포트"],
+        revenue_model:"B2B SaaS 월 ₩49,000 + 정부 보조금 연계" },
+      { name:"PetHome AI", tagline:"반려동물과 집을 함께 지키는 AI",
+        description:"반려동물 특화 스마트홈. 카메라·온도·급식 자동화 + AI 행동 분석.",
+        target_segment:"반려동물 보유 1인 가구, 맞벌이 가구",
+        key_features:["AI 반려동물 행동 분석","자동 급이·급수기 연동","이상 행동 긴급 알림"],
+        revenue_model:"구독 서비스 월 ₩14,900 + IoT 디바이스 판매" },
+    ],
+    recommended_concept:0,
+  },
+  validation: {
+    evaluations:[
+      { concept_index:0, feasibility_score:.82, market_fit_score:.88,
+        risks:["삼성·LG 등 대기업 경쟁","초기 하드웨어 생산 비용"],
+        mitigations:["틈새 버티컬 집중","ODM 파트너십 활용"], verdict:"go" },
+      { concept_index:1, feasibility_score:.75, market_fit_score:.72,
+        risks:["B2B 영업 사이클 장기화","데이터 신뢰성 문제"],
+        mitigations:["파일럿 고객 우선 확보","기존 스마트미터 연동"], verdict:"pivot" },
+      { concept_index:2, feasibility_score:.70, market_fit_score:.79,
+        risks:["틈새 시장 성장 한계","경쟁자 다수 포진"],
+        mitigations:["수의사·펫샵 파트너십","커뮤니티 기반 바이럴"], verdict:"go" },
+    ],
+    final_recommendation:"Bluebird HomeOS(컨셉 1)를 주력으로 추진. 시장 적합성 88%로 가장 우수. PetHome AI는 향후 버티컬 확장 옵션. EcoGuard Pro는 B2B pivot 후 재평가 권장.",
+  },
+  prd:`# Bluebird HomeOS — PRD v1.0
+
+## 1. 제품 개요 (Overview)
+AI 기반 스마트홈 오케스트레이터. 모든 가전을 자연어로 제어하고 에너지를 자동 최적화.
+
+**목표 출시**: 2026년 Q3  |  **담당팀**: FAE Product Team
+
+---
+
+## 2. 문제 정의 (Problem Statement)
+- 스마트홈 사용자 68%가 "설정 복잡성"을 이탈 이유로 꼽음
+- 기기 간 호환성 문제로 실제 연동률 34% 수준
+
+---
+
+## 3. 목표 고객 (Target Users)
+| 세그먼트 | 규모 |
+|---------|------|
+| 맞벌이 부부 (30-40대) | 국내 312만 가구 |
+| 에너지 절감 관심층   | 국내 580만 가구 |
+| 스마트홈 입문자      | 국내 890만 가구 |
+
+---
+
+## 4. 핵심 기능 (Core Features)
+
+### P0 (MVP 필수)
+- 자연어 음성 제어 (Claude AI 연동)
+- 주요 가전 원클릭 자동 연동
+- 에너지 사용 실시간 대시보드
+
+### P1 (v1.1)
+- AI 에너지 패턴 학습 및 자동 절약
+- 다중 기기 루틴 자동화 ("퇴근 모드")
+
+### P2 (v2.0)
+- B2B 오피스·호텔 버티컬 확장
+- Matter 표준 외부 플랫폼 연동
+
+---
+
+## 5. 성공 지표 (KPI)
+| 지표 | 목표 |
+|-----|------|
+| DAU/MAU | > 40% |
+| 기기 연동 완료율 | > 75% |
+| 에너지 절감율 | > 15% |
+| NPS | > 50 |
+
+---
+
+## 6. 출시 로드맵
+- Phase 1 (Q1-Q2): MVP 개발 + 파일럿 50가구
+- Phase 2 (Q3): 정식 출시 + 마케팅
+- Phase 3 (Q4): B2B 버티컬 확장
+
+---
+
+## 7. 리스크
+| 리스크 | 완화 방안 |
+|-------|---------|
+| 대기업 경쟁 | 틈새 버티컬 집중 |
+| 호환성 문제 | Matter 표준 우선 |
+`,
+};
+
+// ══════════════════════════════════════════════════════════════
+// 유틸
+// ══════════════════════════════════════════════════════════════
+
+function now() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+const TAG_COLORS = {
+  research:   { bg:'rgba(59,130,246,.2)',  color:'#93c5fd' },
+  ideation:   { bg:'rgba(168,85,247,.2)',  color:'#d8b4fe' },
+  validation: { bg:'rgba(245,158,11,.2)',  color:'#fcd34d' },
+  prd:        { bg:'rgba(34,197,94,.2)',   color:'#86efac' },
+  system:     { bg:'rgba(100,116,139,.2)', color:'#94a3b8' },
+};
+
+// ══════════════════════════════════════════════════════════════
+// 서브 컴포넌트
+// ══════════════════════════════════════════════════════════════
+
+// ── 연결 화살표 ───────────────────────────────────────────
+function Connector({ state }) {
+  // state: 'idle' | 'active' | 'done'
+  const stroke = state === 'done' ? '#22c55e' : state === 'active' ? '#3b82f6' : '#1e3a5f';
+  const anim   = state === 'active';
+  return (
+    <div className="connector">
+      <svg width="52" height="20" viewBox="0 0 52 20">
+        <defs>
+          <marker id={`arrowhead-${state}`} markerWidth="6" markerHeight="6"
+            refX="3" refY="3" orient="auto">
+            <polygon points="0 0, 6 3, 0 6" fill={stroke} />
+          </marker>
+        </defs>
+        <line x1="2" y1="10" x2="46" y2="10"
+          stroke={stroke} strokeWidth="1.5"
+          strokeDasharray={anim ? "6 4" : "none"}
+          className={anim ? "conn-anim" : ""}
+          markerEnd={`url(#arrowhead-${state})`} />
+      </svg>
+    </div>
+  );
+}
+
+// ── 에이전트 카드 ─────────────────────────────────────────
+function AgentCard({ agent, status, progress, currentMsg }) {
+  const stCls = status === 'running' ? 'running'
+              : status === 'done'    ? 'done'
+              : status === 'waiting' ? 'waiting'
+              : 'idle';
+
+  const badgeLabel = status === 'running' ? '● 실행 중' : status === 'done' ? '✓ 완료'
+                   : status === 'waiting' ? '⏳ 대기'  : '—';
+  const badgeCls   = `agent-badge badge-${status === 'waiting' ? 'waiting' : stCls}`;
+
+  return (
+    <div className={`agent-card ${stCls}`}>
+      <div className={badgeCls}>{badgeLabel}</div>
+      <div className="agent-icon-wrap">
+        <div className="agent-icon">{agent.icon}</div>
+        {status === 'running' && <div className="agent-spinner" />}
+      </div>
+      <div className="agent-name">{agent.name}</div>
+      <div className="agent-role">{agent.role}</div>
+      {status === 'running' && (
+        <>
+          <div className="agent-status-text" style={{fontSize:10}}>
+            {currentMsg || '처리 중...'}
+          </div>
+          <div className="thinking-dots">
+            <div className="dot"/><div className="dot"/><div className="dot"/>
+          </div>
+          {progress > 0 && (
+            <div className="progress-bar-wrap" style={{marginTop:8}}>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width:`${progress}%`}}/>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {status === 'done' && (
+        <div className="check-icon">✓</div>
+      )}
+    </div>
+  );
+}
+
+// ── 로그 라인 ─────────────────────────────────────────────
+function LogLine({ entry }) {
+  const tc = TAG_COLORS[entry.agent] || TAG_COLORS.system;
+  return (
+    <div className="log-line" style={{animationDelay:'0s'}}>
+      <span className="log-time">{entry.time}</span>
+      <span className="log-agent-tag" style={{background:tc.bg, color:tc.color}}>
+        {entry.agentName}
+      </span>
+      <span className={`log-msg ${entry.highlight ? 'highlight' : ''}`}>{entry.msg}</span>
+    </div>
+  );
+}
+
+// ── 시장 조사 결과 ────────────────────────────────────────
+function ResearchResult({ data }) {
+  if (!data) return null;
+  return (
+    <div style={{paddingTop:14}}>
+      <div className="kv-row">
+        <span className="kv-label">시장 개요</span>
+        <span className="kv-val" style={{fontSize:13,lineHeight:1.6}}>{data.market_overview}</span>
+      </div>
+      <div className="kv-row">
+        <span className="kv-label">시장 규모</span>
+        <span className="kv-val">{data.market_size_estimate}</span>
+      </div>
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>주요 트렌드</div>
+        <div className="tag-list">
+          {(data.key_trends||[]).map((t,i)=><span key={i} className="tag tag-blue">{t}</span>)}
+        </div>
+      </div>
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>타겟 고객</div>
+        <div className="tag-list">
+          {(data.target_customers||[]).map((t,i)=><span key={i} className="tag tag-purple">{t}</span>)}
+        </div>
+      </div>
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>Pain Points</div>
+        <div className="tag-list">
+          {(data.pain_points||[]).map((t,i)=><span key={i} className="tag tag-red">{t}</span>)}
+        </div>
+      </div>
+      <div>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>기회</div>
+        <div className="tag-list">
+          {(data.opportunities||[]).map((t,i)=><span key={i} className="tag tag-green">{t}</span>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 아이디어 결과 ─────────────────────────────────────────
+function IdeationResult({ data }) {
+  if (!data) return null;
+  const rec = data.recommended_concept ?? 0;
+  return (
+    <div style={{paddingTop:14}}>
+      <div style={{fontSize:12,color:'var(--muted)',marginBottom:10}}>
+        3가지 제품 컨셉 — <span style={{color:'var(--accent)'}}>★ 추천 컨셉: {rec+1}번</span>
+      </div>
+      <div className="concept-grid">
+        {(data.concepts||[]).map((c,i)=>(
+          <div key={i} className={`concept-card ${i===rec?'recommended':''}`}>
+            {i===rec && <div style={{
+              fontSize:10,fontWeight:700,color:'var(--accent)',
+              background:'rgba(59,130,246,.15)',borderRadius:4,
+              padding:'2px 6px',display:'inline-block',marginBottom:4
+            }}>★ 추천</div>}
+            <div className="concept-name">{c.name}</div>
+            <div className="concept-tagline">"{c.tagline}"</div>
+            <div className="concept-desc">{c.description}</div>
+            <div className="tag-list" style={{marginBottom:8}}>
+              {(c.key_features||[]).map((f,j)=><span key={j} className="tag tag-blue" style={{fontSize:10}}>{f}</span>)}
+            </div>
+            <div style={{fontSize:11,color:'var(--muted)'}}>💰 {c.revenue_model}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── 검증 결과 ─────────────────────────────────────────────
+function ValidationResult({ data }) {
+  if (!data) return null;
+  return (
+    <div style={{paddingTop:14}}>
+      {(data.evaluations||[]).map((ev,i)=>(
+        <div key={i} className="eval-row">
+          <div className="eval-name">컨셉 {ev.concept_index+1}</div>
+          <div className="score-bar-wrap">
+            <div className="score-bar">
+              <div className="score-fill" style={{
+                width:`${ev.feasibility_score*100}%`,
+                background:`linear-gradient(90deg, var(--accent), var(--accent2))`
+              }}/>
+            </div>
+            <div className="score-label">
+              <span>실현가능성 {(ev.feasibility_score*100).toFixed(0)}%</span>
+              <span>시장적합성 {(ev.market_fit_score*100).toFixed(0)}%</span>
+            </div>
+          </div>
+          <div className={`verdict verdict-${ev.verdict}`}>
+            {ev.verdict==='go'?'GO ✓':ev.verdict==='pivot'?'PIVOT △':'DROP ✗'}
+          </div>
+        </div>
+      ))}
+      <div style={{
+        marginTop:12, padding:'10px 14px', background:'rgba(34,197,94,.08)',
+        border:'1px solid rgba(34,197,94,.2)', borderRadius:8, fontSize:13, color:'#86efac'
+      }}>
+        💬 {data.final_recommendation}
+      </div>
+    </div>
+  );
+}
+
+// ── PRD 결과 ──────────────────────────────────────────────
+function PRDResult({ data }) {
+  if (!data) return null;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(data).then(()=>alert('PRD가 클립보드에 복사되었습니다!'));
+  };
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], {type:'text/markdown'}));
+    a.download = 'PRD.md';
+    a.click();
+  };
+  return (
+    <div style={{paddingTop:14}}>
+      <pre className="prd-text">{data}</pre>
+      <div className="btn-row">
+        <button className="action-btn primary" onClick={handleDownload}>⬇ PRD 다운로드 (.md)</button>
+        <button className="action-btn" onClick={handleCopy}>📋 클립보드 복사</button>
+      </div>
+    </div>
+  );
+}
+
+// ── 결과 아코디언 카드 ──────────────────────────────────
+function ResultCard({ icon, title, accentColor, children }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="result-card" style={{borderLeftColor:accentColor, borderLeftWidth:3}}>
+      <div className="result-header" onClick={()=>setOpen(!open)}>
+        <span className="result-icon">{icon}</span>
+        <span className="result-title">{title}</span>
+        <span className={`result-chevron ${open?'open':''}`}>▼</span>
+      </div>
+      {open && <div className="result-body">{children}</div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 메인 App
+// ══════════════════════════════════════════════════════════════
+
+function App() {
+  const [topic,       setTopic]       = useState('');
+  const [mode,        setMode]        = useState('demo');  // 'demo' | 'live'
+  const [apiOnline,   setApiOnline]   = useState(false);
+  const [phase,       setPhase]       = useState('idle');  // idle | running | done | error
+  const [agentStatus, setAgentStatus] = useState({research:'idle',ideation:'idle',validation:'idle',prd:'idle'});
+  const [agentMsg,    setAgentMsg]    = useState({research:'',ideation:'',validation:'',prd:''});
+  const [agentProg,   setAgentProg]   = useState({research:0,ideation:0,validation:0,prd:0});
+  const [logs,        setLogs]        = useState([]);
+  const [results,     setResults]     = useState({research:null,ideation:null,validation:null,prd:null});
+  const logRef = useRef(null);
+  const pollRef = useRef(null);
+
+  // API 상태 체크 (5초마다)
+  useEffect(()=>{
+    const check = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/health`, {signal: AbortSignal.timeout(2000)});
+        setApiOnline(r.ok);
+      } catch { setApiOnline(false); }
+    };
+    check();
+    const t = setInterval(check, 5000);
+    return () => clearInterval(t);
+  },[]);
+
+  // 로그 자동 스크롤
+  useEffect(()=>{
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  },[logs]);
+
+  const addLog = useCallback((agentId, msg, highlight=false) => {
+    const agent = AGENTS.find(a=>a.id===agentId);
+    setLogs(prev=>[...prev, {
+      time: now(),
+      agent: agentId,
+      agentName: agent ? agent.name : 'SYSTEM',
+      msg, highlight,
+      id: Date.now()+Math.random(),
+    }]);
+  },[]);
+
+  const setAgentState = useCallback((id, status, msg='', prog=0) => {
+    setAgentStatus(p=>({...p,[id]:status}));
+    setAgentMsg(p=>({...p,[id]:msg}));
+    setAgentProg(p=>({...p,[id]:prog}));
+  },[]);
+
+  // ── 에이전트 시뮬레이션 ─────────────────────────────────
+  const simulateAgent = useCallback(async (agentId, topic, realResult=null) => {
+    const logs_  = AGENT_LOGS[agentId];
+    const total  = logs_.length;
+    setAgentState(agentId, 'running', logs_[0](topic), 0);
+    addLog('system', `[${AGENTS.find(a=>a.id===agentId).name}] 에이전트 시작`, true);
+
+    for (let i=0; i<total; i++) {
+      await sleep(i === 0 ? 300 : 900 + Math.random()*400);
+      const msg = logs_[i](topic);
+      const prog = Math.round(((i+1)/total)*100);
+      setAgentState(agentId, 'running', msg, prog);
+      addLog(agentId, msg, i===total-1);
+    }
+
+    await sleep(400);
+    setAgentState(agentId, 'done', '완료', 100);
+
+    // 결과 데이터 반영
+    if (realResult) {
+      setResults(p=>({...p,[agentId]:realResult}));
+    } else {
+      setResults(p=>({...p,[agentId]:MOCK[agentId]}));
+    }
+  },[addLog, setAgentState]);
+
+  // ── 전체 파이프라인 실행 ─────────────────────────────────
+  const runPipeline = useCallback(async (topicText) => {
+    if (!topicText.trim()) return;
+    setPhase('running');
+    setLogs([]);
+    setResults({research:null,ideation:null,validation:null,prd:null});
+    setAgentStatus({research:'waiting',ideation:'waiting',validation:'waiting',prd:'waiting'});
+    addLog('system', `파이프라인 시작: "${topicText}"`, true);
+
+    let liveJobId = null;
+    let liveData  = null;
+
+    // Live 모드: API 호출
+    if (mode === 'live' && apiOnline) {
+      try {
+        addLog('system', 'API 서버로 조사 요청 전송 중...');
+        const res = await fetch(`${API_BASE}/research`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ topic:topicText, save_target:'db' }),
+        });
+        const job = await res.json();
+        liveJobId = job.id;
+        addLog('system', `Job ID: ${liveJobId} — 백그라운드 실행 시작`, true);
+
+        // 폴링 시작
+        pollRef.current = setInterval(async () => {
+          try {
+            const r2 = await fetch(`${API_BASE}/research/${liveJobId}`);
+            const j2 = await r2.json();
+            if (j2.status === 'completed') {
+              clearInterval(pollRef.current);
+              liveData = j2;
+            }
+          } catch {}
+        }, 3000);
+      } catch(e) {
+        addLog('system', `API 오류: ${e.message} — 데모 모드로 전환`);
+      }
+    }
+
+    // 4 에이전트 순차 실행
+    const agents = ['research','ideation','validation','prd'];
+    for (const id of agents) {
+      // 이전 에이전트들은 waiting → 현재 running
+      await simulateAgent(id, topicText,
+        liveData ? liveData[`result_${id==='prd'?'prd':id}`] : null
+      );
+      await sleep(300);
+    }
+
+    // 폴링 정리
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    // Live 결과가 있으면 업데이트
+    if (liveData) {
+      setResults({
+        research:   liveData.result_research,
+        ideation:   liveData.result_ideation,
+        validation: liveData.result_validation,
+        prd:        liveData.result_prd,
+      });
+    }
+
+    addLog('system', '🎉 모든 에이전트 완료! PRD가 생성되었습니다.', true);
+    setPhase('done');
+  },[mode, apiOnline, addLog, simulateAgent]);
+
+  // 언마운트 시 폴링 정리
+  useEffect(()=>()=>{ if(pollRef.current) clearInterval(pollRef.current); },[]);
+
+  // ── 커넥터 상태 계산 ────────────────────────────────────
+  function connState(fromId, toId) {
+    const order = ['research','ideation','validation','prd'];
+    const fi = order.indexOf(fromId), ti = order.indexOf(toId);
+    if (agentStatus[fromId]==='done' && agentStatus[toId]==='done') return 'done';
+    if (agentStatus[fromId]==='done' && agentStatus[toId]==='running') return 'active';
+    return 'idle';
+  }
+
+  // ── 렌더 ───────────────────────────────────────────────
+  return (
+    <div>
+      {/* ── 헤더 ── */}
+      <header className="header">
+        <div className="header-glow"/>
+        <div className="logo">
+          <div className="logo-icon">🐦</div>
+          <div className="logo-text">
+            <h1>Bluebird B-APO</h1>
+            <p>AI 상품기획 대시보드 — 4-Agent Pipeline</p>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          {/* 모드 토글 */}
+          <div className="mode-toggle">
+            <button className={`mode-btn ${mode==='demo'?'active':''}`} onClick={()=>setMode('demo')}>
+              🎭 Demo
+            </button>
+            <button className={`mode-btn ${mode==='live'?'active':''}`} onClick={()=>setMode('live')}>
+              ⚡ Live
+            </button>
+          </div>
+          {/* API 상태 */}
+          <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--muted)'}}>
+            <div className={`status-dot ${apiOnline?'online':''}`}/>
+            {apiOnline ? 'API 연결됨' : 'API 오프라인'}
+          </div>
+        </div>
+      </header>
+
+      <div className="main">
+        {/* ── 검색 섹션 ── */}
+        <div className="search-section">
+          <div className="search-title shimmer-text">상품기획 AI 에이전트</div>
+          <p className="search-subtitle">
+            주제를 입력하면 4단계 AI 에이전트가 시장조사 → 기획 → 검증 → PRD 작성을 자동 수행합니다
+          </p>
+          <div className="search-box">
+            <input
+              className="search-input"
+              placeholder="예: 2025 AI 헬스케어 웨어러블 시장 분석..."
+              value={topic}
+              onChange={e=>setTopic(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&phase!=='running'&&runPipeline(topic)}
+              disabled={phase==='running'}
+            />
+            <button
+              className="search-btn"
+              onClick={()=>runPipeline(topic)}
+              disabled={phase==='running'||!topic.trim()}
+            >
+              {phase==='running' ? (
+                <><span style={{animation:'spin .8s linear infinite',display:'inline-block'}}>⚙</span> 분석 중...</>
+              ) : '▶ AI 조사 시작'}
+            </button>
+          </div>
+          {phase==='idle'&&(
+            <div className="search-chips">
+              {EXAMPLE_TOPICS.map(t=>(
+                <span key={t} className="chip" onClick={()=>setTopic(t)}>📌 {t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── 파이프라인 (실행/완료 시 표시) ── */}
+        {phase !== 'idle' && (
+          <>
+            <div className="pipeline-section">
+              <div className="section-label">🤖 AI 에이전트 파이프라인</div>
+              <div className="pipeline">
+                {AGENTS.map((agent,i)=>(
+                  <div key={agent.id} className="agent-wrap">
+                    <AgentCard
+                      agent={agent}
+                      status={agentStatus[agent.id]}
+                      progress={agentProg[agent.id]}
+                      currentMsg={agentMsg[agent.id]}
+                    />
+                    {i < AGENTS.length-1 && (
+                      <Connector state={connState(agent.id, AGENTS[i+1].id)} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── 로그 패널 ── */}
+            <div className="log-section">
+              <div className="section-label">📡 실시간 에이전트 활동 로그</div>
+              <div className="log-panel">
+                <div className="log-header">
+                  <div className="log-dot" style={{background:'#ef4444'}}/>
+                  <div className="log-dot" style={{background:'#f59e0b'}}/>
+                  <div className="log-dot" style={{background:'#22c55e'}}/>
+                  <span style={{marginLeft:6}}>agent-console</span>
+                  <span style={{marginLeft:'auto', color:'#22c55e', fontSize:11}}>
+                    {phase==='running'?'● 실행 중':'● 완료'}
+                  </span>
+                </div>
+                <div className="log-body" ref={logRef}>
+                  {logs.length === 0 && (
+                    <span style={{color:'#334155'}}>에이전트 시작 대기 중...<span className="log-cursor">_</span></span>
+                  )}
+                  {logs.map(entry=><LogLine key={entry.id} entry={entry}/>)}
+                  {phase==='running'&&(
+                    <span style={{color:'#334155'}}><span className="log-cursor">_</span></span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 결과 섹션 ── */}
+            {(results.research || results.ideation || results.validation || results.prd) && (
+              <div>
+                <div className="section-label">📊 분석 결과</div>
+                <div className="results-section">
+                  {results.research && (
+                    <ResultCard icon="🔎" title="1단계: 시장 조사 결과" accentColor="#3b82f6">
+                      <ResearchResult data={results.research}/>
+                    </ResultCard>
+                  )}
+                  {results.ideation && (
+                    <ResultCard icon="💡" title="2단계: 제품 컨셉 3가지" accentColor="#a855f7">
+                      <IdeationResult data={results.ideation}/>
+                    </ResultCard>
+                  )}
+                  {results.validation && (
+                    <ResultCard icon="✅" title="3단계: 검증 결과" accentColor="#f59e0b">
+                      <ValidationResult data={results.validation}/>
+                    </ResultCard>
+                  )}
+                  {results.prd && (
+                    <ResultCard icon="📄" title="4단계: PRD 문서 (제품 요구사항 정의서)" accentColor="#22c55e">
+                      <PRDResult data={results.prd}/>
+                    </ResultCard>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── 빈 상태 ── */}
+        {phase === 'idle' && (
+          <div className="empty-state">
+            <div className="empty-icon">🤖</div>
+            <div className="empty-title">AI 에이전트 준비 완료</div>
+            <p className="empty-sub">
+              위 검색창에 상품 기획 주제를 입력하면<br/>
+              <span style={{color:'var(--accent)'}}>시장조사 → 아이디어 기획 → 검증 → PRD 작성</span>까지<br/>
+              4단계 AI 에이전트가 자동으로 수행합니다
+            </p>
+            <div style={{marginTop:24, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap'}}>
+              {['🔎 실시간 웹 검색 (Tavily)','💡 Claude AI 기획','✅ 리스크 검증','📄 PRD 자동 생성'].map(t=>(
+                <span key={t} style={{
+                  padding:'6px 14px', background:'var(--surface2)',
+                  border:'1px solid var(--border)', borderRadius:20,
+                  fontSize:12, color:'var(--muted)'
+                }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 마운트 ──────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
