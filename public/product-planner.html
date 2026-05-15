@@ -409,6 +409,72 @@ body::before {
   animation: shimmer 2s linear infinite;
 }
 
+/* ── 데이터 소스 배지 ────────────────────────────────── */
+.data-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;
+  margin-left:auto; flex-shrink:0;
+}
+.data-badge.demo  { background:rgba(245,158,11,.15); color:#fcd34d; border:1px solid rgba(245,158,11,.3); }
+.data-badge.real  { background:rgba(34,197,94,.2); color:#4ade80; border:1px solid rgba(34,197,94,.4); }
+.data-badge.real::before { content:''; width:6px; height:6px; border-radius:50%; background:#4ade80; }
+
+/* ── Awaiting 배너 ──────────────────────────────────── */
+@keyframes awaitPulse {
+  0%,100% { opacity:.7; } 50% { opacity:1; }
+}
+.await-banner {
+  display:flex; align-items:center; gap:14px;
+  background: linear-gradient(135deg, #0d1b3e, #111827);
+  border:1.5px solid var(--accent); border-radius:12px;
+  padding:16px 22px; margin-bottom:24px;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+.await-spinner {
+  width:28px; height:28px; border-radius:50%;
+  border:3px solid rgba(59,130,246,.2); border-top-color:var(--accent);
+  animation:spin .8s linear infinite; flex-shrink:0;
+}
+.await-text { flex:1; }
+.await-text p { font-size:13px; font-weight:700; color:var(--accent); margin:0 0 3px; }
+.await-text small { font-size:11px; color:var(--muted); }
+
+/* ── Real AI 플래시 ──────────────────────────────────── */
+@keyframes realFlash {
+  0%   { background:rgba(34,197,94,.25); }
+  100% { background:transparent; }
+}
+.result-card.real-updated { animation: realFlash 1.5s ease; }
+
+/* ── 셋업 가이드 패널 ────────────────────────────────── */
+.setup-guide {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; overflow:hidden; margin-bottom:24px;
+}
+.setup-guide-header {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 18px; cursor:pointer; user-select:none;
+  font-size:13px; font-weight:700; color:var(--yellow);
+  background:rgba(245,158,11,.05);
+}
+.setup-guide-body {
+  padding:16px 20px; border-top:1px solid var(--border);
+  font-size:12px; line-height:1.9; color:#94a3b8;
+}
+.setup-step {
+  display:flex; gap:10px; margin-bottom:12px; align-items:flex-start;
+}
+.setup-num {
+  width:22px; height:22px; border-radius:50%; background:var(--accent);
+  color:#fff; font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;
+}
+.setup-code {
+  background:#060d1f; border:1px solid var(--border); border-radius:6px;
+  padding:6px 12px; font-family:monospace; font-size:11px; color:#86efac;
+  margin:4px 0; display:block; white-space:pre;
+}
+
 /* ── 반응형 ──────────────────────────────────────────── */
 @media(max-width:700px){
   .header { padding:14px 16px; }
@@ -838,16 +904,89 @@ function PRDResult({ data }) {
 }
 
 // ── 결과 아코디언 카드 ──────────────────────────────────
-function ResultCard({ icon, title, accentColor, children }) {
+function ResultCard({ icon, title, accentColor, isReal, children }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="result-card" style={{borderLeftColor:accentColor, borderLeftWidth:3}}>
+    <div className={`result-card ${isReal?'real-updated':''}`}
+      style={{borderLeftColor:accentColor, borderLeftWidth:3}}>
       <div className="result-header" onClick={()=>setOpen(!open)}>
         <span className="result-icon">{icon}</span>
         <span className="result-title">{title}</span>
+        {isReal
+          ? <span style={{fontSize:10,fontWeight:700,color:'#4ade80',
+              background:'rgba(34,197,94,.15)',border:'1px solid rgba(34,197,94,.3)',
+              borderRadius:12,padding:'2px 8px',marginLeft:8,flexShrink:0}}>
+              ● Real AI
+            </span>
+          : <span style={{fontSize:10,color:'var(--muted)',marginLeft:8,flexShrink:0}}>Demo</span>
+        }
         <span className={`result-chevron ${open?'open':''}`}>▼</span>
       </div>
       {open && <div className="result-body">{children}</div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 셋업 가이드 컴포넌트
+// ══════════════════════════════════════════════════════════════
+
+function SetupGuide() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="setup-guide">
+      <div className="setup-guide-header" onClick={()=>setOpen(!open)}>
+        ⚡ Live 모드 활성화 방법 (API 키 + 백엔드 서버 필요)
+        <span style={{marginLeft:'auto'}}>{open?'▲':'▼'}</span>
+      </div>
+      {open && (
+        <div className="setup-guide-body">
+          <div className="setup-step">
+            <div className="setup-num">1</div>
+            <div>
+              <strong style={{color:'#e2e8f0'}}>API 키 발급</strong><br/>
+              • <span style={{color:'#93c5fd'}}>Anthropic</span>: console.anthropic.com → API Keys → Create<br/>
+              • <span style={{color:'#93c5fd'}}>Tavily</span>: app.tavily.com → 무료 가입 → API Key (월 1,000회 무료)
+            </div>
+          </div>
+          <div className="setup-step">
+            <div className="setup-num">2</div>
+            <div>
+              <strong style={{color:'#e2e8f0'}}>.env 파일 생성</strong>
+              <code className="setup-code">cd C:\Users\user\bluebird-apo
+copy .env.example .env
+# .env 열어서 아래 두 줄 입력:
+ANTHROPIC_API_KEY=sk-ant-여기에입력
+TAVILY_API_KEY=tvly-여기에입력</code>
+            </div>
+          </div>
+          <div className="setup-step">
+            <div className="setup-num">3</div>
+            <div>
+              <strong style={{color:'#e2e8f0'}}>Python 환경 & 패키지 설치</strong>
+              <code className="setup-code">python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt</code>
+            </div>
+          </div>
+          <div className="setup-step">
+            <div className="setup-num">4</div>
+            <div>
+              <strong style={{color:'#e2e8f0'}}>백엔드 서버 시작 (새 터미널)</strong>
+              <code className="setup-code">cd C:\Users\user\bluebird-apo
+.venv\Scripts\activate
+uvicorn main:app --reload --port 8000</code>
+            </div>
+          </div>
+          <div className="setup-step">
+            <div className="setup-num">5</div>
+            <div>
+              <strong style={{color:'#e2e8f0'}}>이 페이지에서 ⚡ Live 클릭</strong><br/>
+              헤더 우측 상태 점이 <span style={{color:'#22c55e'}}>●</span> 초록색이면 연결 완료!
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -858,28 +997,34 @@ function ResultCard({ icon, title, accentColor, children }) {
 
 function App() {
   const [topic,       setTopic]       = useState('');
-  const [mode,        setMode]        = useState('demo');  // 'demo' | 'live'
+  const [mode,        setMode]        = useState('demo');
   const [apiOnline,   setApiOnline]   = useState(false);
-  const [phase,       setPhase]       = useState('idle');  // idle | running | done | error
+  // phase: idle | running | awaiting | done
+  const [phase,       setPhase]       = useState('idle');
+  // dataSource: demo | real | awaiting
+  const [dataSource,  setDataSource]  = useState('demo');
+  const [liveJobId,   setLiveJobId]   = useState(null);
+  const [awaitMsg,    setAwaitMsg]    = useState('');
   const [agentStatus, setAgentStatus] = useState({research:'idle',ideation:'idle',validation:'idle',prd:'idle'});
   const [agentMsg,    setAgentMsg]    = useState({research:'',ideation:'',validation:'',prd:''});
   const [agentProg,   setAgentProg]   = useState({research:0,ideation:0,validation:0,prd:0});
   const [logs,        setLogs]        = useState([]);
   const [results,     setResults]     = useState({research:null,ideation:null,validation:null,prd:null});
-  const logRef = useRef(null);
-  const pollRef = useRef(null);
+  const [realUpdated, setRealUpdated] = useState(false);
+  const logRef    = useRef(null);
+  const pollRef   = useRef(null);
 
-  // API 상태 체크 (5초마다)
+  // ── API 상태 헬스체크 ──────────────────────────────────
   useEffect(()=>{
     const check = async () => {
       try {
-        const r = await fetch(`${API_BASE}/health`, {signal: AbortSignal.timeout(2000)});
+        const r = await fetch(`${API_BASE}/health`, {signal:AbortSignal.timeout(2000)});
         setApiOnline(r.ok);
       } catch { setApiOnline(false); }
     };
     check();
     const t = setInterval(check, 5000);
-    return () => clearInterval(t);
+    return ()=>clearInterval(t);
   },[]);
 
   // 로그 자동 스크롤
@@ -887,130 +1032,157 @@ function App() {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   },[logs]);
 
-  const addLog = useCallback((agentId, msg, highlight=false) => {
+  const addLog = useCallback((agentId, msg, highlight=false)=>{
     const agent = AGENTS.find(a=>a.id===agentId);
-    setLogs(prev=>[...prev, {
-      time: now(),
-      agent: agentId,
-      agentName: agent ? agent.name : 'SYSTEM',
-      msg, highlight,
-      id: Date.now()+Math.random(),
+    setLogs(prev=>[...prev,{
+      time:now(), agent:agentId,
+      agentName:agent?agent.name:'SYSTEM',
+      msg, highlight, id:Date.now()+Math.random(),
     }]);
   },[]);
 
-  const setAgentState = useCallback((id, status, msg='', prog=0) => {
+  const setAgentState = useCallback((id,status,msg='',prog=0)=>{
     setAgentStatus(p=>({...p,[id]:status}));
     setAgentMsg(p=>({...p,[id]:msg}));
     setAgentProg(p=>({...p,[id]:prog}));
   },[]);
 
-  // ── 에이전트 시뮬레이션 ─────────────────────────────────
-  const simulateAgent = useCallback(async (agentId, topic, realResult=null) => {
-    const logs_  = AGENT_LOGS[agentId];
-    const total  = logs_.length;
-    setAgentState(agentId, 'running', logs_[0](topic), 0);
-    addLog('system', `[${AGENTS.find(a=>a.id===agentId).name}] 에이전트 시작`, true);
-
-    for (let i=0; i<total; i++) {
-      await sleep(i === 0 ? 300 : 900 + Math.random()*400);
-      const msg = logs_[i](topic);
+  // ── 에이전트 시각 시뮬레이션 (결과 세팅 없음) ──────────
+  const simulateAgent = useCallback(async (agentId, topicText)=>{
+    const logMsgs = AGENT_LOGS[agentId];
+    const total   = logMsgs.length;
+    setAgentState(agentId,'running',logMsgs[0](topicText),0);
+    addLog('system',`[${AGENTS.find(a=>a.id===agentId).name}] 에이전트 시작`,true);
+    for (let i=0;i<total;i++){
+      await sleep(i===0?300:900+Math.random()*400);
+      const msg  = logMsgs[i](topicText);
       const prog = Math.round(((i+1)/total)*100);
-      setAgentState(agentId, 'running', msg, prog);
-      addLog(agentId, msg, i===total-1);
+      setAgentState(agentId,'running',msg,prog);
+      addLog(agentId,msg,i===total-1);
     }
-
     await sleep(400);
-    setAgentState(agentId, 'done', '완료', 100);
+    setAgentState(agentId,'done','완료',100);
+  },[addLog,setAgentState]);
 
-    // 결과 데이터 반영
-    if (realResult) {
-      setResults(p=>({...p,[agentId]:realResult}));
-    } else {
-      setResults(p=>({...p,[agentId]:MOCK[agentId]}));
-    }
-  },[addLog, setAgentState]);
-
-  // ── 전체 파이프라인 실행 ─────────────────────────────────
-  const runPipeline = useCallback(async (topicText) => {
+  // ── 핵심 수정: 전체 파이프라인 실행 ────────────────────
+  const runPipeline = useCallback(async (topicText)=>{
     if (!topicText.trim()) return;
     setPhase('running');
+    setDataSource('demo');
+    setRealUpdated(false);
+    setLiveJobId(null);
+    setAwaitMsg('');
     setLogs([]);
     setResults({research:null,ideation:null,validation:null,prd:null});
     setAgentStatus({research:'waiting',ideation:'waiting',validation:'waiting',prd:'waiting'});
-    addLog('system', `파이프라인 시작: "${topicText}"`, true);
+    addLog('system',`파이프라인 시작: "${topicText}"`,true);
 
-    let liveJobId = null;
-    let liveData  = null;
+    // ── Step 1: Live 모드라면 API 호출 → 폴링 Promise 생성 ──
+    let liveDataPromise = null;
+    let jobId = null;
 
-    // Live 모드: API 호출
-    if (mode === 'live' && apiOnline) {
-      try {
-        addLog('system', 'API 서버로 조사 요청 전송 중...');
-        const res = await fetch(`${API_BASE}/research`, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ topic:topicText, save_target:'db' }),
-        });
-        const job = await res.json();
-        liveJobId = job.id;
-        addLog('system', `Job ID: ${liveJobId} — 백그라운드 실행 시작`, true);
+    if (mode==='live') {
+      const isUp = await fetch(`${API_BASE}/health`,{signal:AbortSignal.timeout(2000)})
+        .then(r=>r.ok).catch(()=>false);
 
-        // 폴링 시작
-        pollRef.current = setInterval(async () => {
-          try {
-            const r2 = await fetch(`${API_BASE}/research/${liveJobId}`);
-            const j2 = await r2.json();
-            if (j2.status === 'completed') {
-              clearInterval(pollRef.current);
-              liveData = j2;
-            }
-          } catch {}
-        }, 3000);
-      } catch(e) {
-        addLog('system', `API 오류: ${e.message} — 데모 모드로 전환`);
+      if (!isUp) {
+        addLog('system','⚠ 백엔드(localhost:8000) 미연결 → Demo 데이터로 실행',true);
+      } else {
+        try {
+          addLog('system','⚡ 실제 Claude AI + Tavily 분석 요청 전송 중...',true);
+          const res = await fetch(`${API_BASE}/research`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({topic:topicText,save_target:'db'}),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const job = await res.json();
+          jobId = job.id;
+          setLiveJobId(jobId);
+          addLog('system',`✓ Job #${jobId} 생성 — 백엔드에서 실제 AI 분석 시작됨`,true);
+
+          // ★ 핵심: 폴링 결과를 Promise로 감싸서 나중에 await 가능하게 함
+          liveDataPromise = new Promise((resolve,reject)=>{
+            let tries = 0;
+            pollRef.current = setInterval(async()=>{
+              if (++tries > 100) {           // 5분 타임아웃
+                clearInterval(pollRef.current);
+                reject(new Error('5분 초과 타임아웃'));
+                return;
+              }
+              try {
+                const r2 = await fetch(`${API_BASE}/research/${jobId}`);
+                const j2 = await r2.json();
+                if (j2.status==='completed') {
+                  clearInterval(pollRef.current);
+                  resolve(j2);
+                } else if (j2.status==='failed') {
+                  clearInterval(pollRef.current);
+                  reject(new Error(j2.error||'분석 실패'));
+                }
+              } catch(e){ /* 네트워크 오류 무시, 계속 폴링 */ }
+            },3000);
+          });
+        } catch(e){
+          addLog('system',`API 오류: ${e.message} → Demo 데이터로 대체`,true);
+        }
       }
     }
 
-    // 4 에이전트 순차 실행
-    const agents = ['research','ideation','validation','prd'];
-    for (const id of agents) {
-      // 이전 에이전트들은 waiting → 현재 running
-      await simulateAgent(id, topicText,
-        liveData ? liveData[`result_${id==='prd'?'prd':id}`] : null
-      );
+    // ── Step 2: 시각적 시뮬레이션 + 즉시 Demo 결과 표시 ──
+    for (const id of ['research','ideation','validation','prd']){
+      await simulateAgent(id, topicText);
+      // 즉시 Demo 데이터 표시 (시각 피드백)
+      setResults(p=>({...p,[id]:MOCK[id]}));
       await sleep(300);
     }
+    addLog('system','✅ 시각 시뮬레이션 완료 (Demo 데이터 표시 중)',true);
 
-    // 폴링 정리
-    if (pollRef.current) clearInterval(pollRef.current);
+    // ── Step 3: Live 모드라면 실제 AI 결과 도착 대기 ─────
+    if (liveDataPromise) {
+      setPhase('awaiting');
+      setDataSource('awaiting');
+      setAwaitMsg(`Job #${jobId} — Claude AI가 실제 분석 중... (3초마다 자동 갱신)`);
+      addLog('system',`⏳ 실제 AI 결과 대기 중 (Job #${jobId})...`,true);
 
-    // Live 결과가 있으면 업데이트
-    if (liveData) {
-      setResults({
-        research:   liveData.result_research,
-        ideation:   liveData.result_ideation,
-        validation: liveData.result_validation,
-        prd:        liveData.result_prd,
-      });
+      try {
+        const realData = await liveDataPromise; // ← 여기서 실제로 기다림
+
+        // ★ Demo 데이터를 실제 AI 데이터로 교체
+        setResults({
+          research:   realData.result_research   || MOCK.research,
+          ideation:   realData.result_ideation   || MOCK.ideation,
+          validation: realData.result_validation || MOCK.validation,
+          prd:        realData.result_prd        || MOCK.prd,
+        });
+        setDataSource('real');
+        setRealUpdated(true);
+        addLog('system',`🎯 실제 Claude AI 분석 완료! Job #${jobId} — 결과가 실제 데이터로 업데이트됨`,true);
+        setTimeout(()=>setRealUpdated(false), 3000); // 플래시 효과 종료
+      } catch(e){
+        addLog('system',`⚠ 실제 분석 수신 실패: ${e.message} — Demo 데이터 유지`,true);
+        setDataSource('demo');
+      }
     }
 
-    addLog('system', '🎉 모든 에이전트 완료! PRD가 생성되었습니다.', true);
     setPhase('done');
-  },[mode, apiOnline, addLog, simulateAgent]);
+  },[mode,addLog,simulateAgent]);
 
-  // 언마운트 시 폴링 정리
   useEffect(()=>()=>{ if(pollRef.current) clearInterval(pollRef.current); },[]);
 
-  // ── 커넥터 상태 계산 ────────────────────────────────────
-  function connState(fromId, toId) {
-    const order = ['research','ideation','validation','prd'];
-    const fi = order.indexOf(fromId), ti = order.indexOf(toId);
-    if (agentStatus[fromId]==='done' && agentStatus[toId]==='done') return 'done';
-    if (agentStatus[fromId]==='done' && agentStatus[toId]==='running') return 'active';
+  function connState(fromId, toId){
+    if (agentStatus[fromId]==='done'&&agentStatus[toId]==='done') return 'done';
+    if (agentStatus[fromId]==='done'&&agentStatus[toId]==='running') return 'active';
     return 'idle';
   }
 
-  // ── 렌더 ───────────────────────────────────────────────
+  const isRunning = phase==='running'||phase==='awaiting';
+  const dataBadge = dataSource==='real'
+    ? <span className="data-badge real">Real AI ✓ Claude+Tavily</span>
+    : dataSource==='awaiting'
+    ? <span className="data-badge demo" style={{animation:'awaitPulse 1.2s ease infinite'}}>⏳ AI 결과 수신 중...</span>
+    : <span className="data-badge demo">🎭 Demo 데이터</span>;
+
   return (
     <div>
       {/* ── 헤더 ── */}
@@ -1024,24 +1196,25 @@ function App() {
           </div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-          {/* 모드 토글 */}
           <div className="mode-toggle">
-            <button className={`mode-btn ${mode==='demo'?'active':''}`} onClick={()=>setMode('demo')}>
+            <button className={`mode-btn ${mode==='demo'?'active':''}`} onClick={()=>!isRunning&&setMode('demo')}>
               🎭 Demo
             </button>
-            <button className={`mode-btn ${mode==='live'?'active':''}`} onClick={()=>setMode('live')}>
+            <button className={`mode-btn ${mode==='live'?'active':''}`} onClick={()=>!isRunning&&setMode('live')}>
               ⚡ Live
             </button>
           </div>
-          {/* API 상태 */}
           <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--muted)'}}>
             <div className={`status-dot ${apiOnline?'online':''}`}/>
-            {apiOnline ? 'API 연결됨' : 'API 오프라인'}
+            <span>{apiOnline?'API 연결됨':'API 오프라인'}</span>
           </div>
         </div>
       </header>
 
       <div className="main">
+        {/* ── Live 모드 셋업 가이드 ── */}
+        {mode==='live'&&!apiOnline&&phase==='idle'&&<SetupGuide/>}
+
         {/* ── 검색 섹션 ── */}
         <div className="search-section">
           <div className="search-title shimmer-text">상품기획 AI 에이전트</div>
@@ -1051,20 +1224,20 @@ function App() {
           <div className="search-box">
             <input
               className="search-input"
-              placeholder="예: 2025 AI 헬스케어 웨어러블 시장 분석..."
+              placeholder="예: 블루버드 RFID 솔루션 판매 증대 전략..."
               value={topic}
               onChange={e=>setTopic(e.target.value)}
-              onKeyDown={e=>e.key==='Enter'&&phase!=='running'&&runPipeline(topic)}
-              disabled={phase==='running'}
+              onKeyDown={e=>e.key==='Enter'&&!isRunning&&runPipeline(topic)}
+              disabled={isRunning}
             />
             <button
               className="search-btn"
               onClick={()=>runPipeline(topic)}
-              disabled={phase==='running'||!topic.trim()}
+              disabled={isRunning||!topic.trim()}
             >
-              {phase==='running' ? (
-                <><span style={{animation:'spin .8s linear infinite',display:'inline-block'}}>⚙</span> 분석 중...</>
-              ) : '▶ AI 조사 시작'}
+              {isRunning
+                ? <><span style={{animation:'spin .8s linear infinite',display:'inline-block'}}>⚙</span> 분석 중...</>
+                : '▶ AI 조사 시작'}
             </button>
           </div>
           {phase==='idle'&&(
@@ -1076,29 +1249,39 @@ function App() {
           )}
         </div>
 
-        {/* ── 파이프라인 (실행/완료 시 표시) ── */}
-        {phase !== 'idle' && (
+        {/* ── 파이프라인 (실행 이후) ── */}
+        {phase!=='idle'&&(
           <>
+            {/* 에이전트 파이프라인 */}
             <div className="pipeline-section">
               <div className="section-label">🤖 AI 에이전트 파이프라인</div>
               <div className="pipeline">
                 {AGENTS.map((agent,i)=>(
                   <div key={agent.id} className="agent-wrap">
-                    <AgentCard
-                      agent={agent}
-                      status={agentStatus[agent.id]}
-                      progress={agentProg[agent.id]}
-                      currentMsg={agentMsg[agent.id]}
-                    />
-                    {i < AGENTS.length-1 && (
-                      <Connector state={connState(agent.id, AGENTS[i+1].id)} />
-                    )}
+                    <AgentCard agent={agent} status={agentStatus[agent.id]}
+                      progress={agentProg[agent.id]} currentMsg={agentMsg[agent.id]}/>
+                    {i<AGENTS.length-1&&<Connector state={connState(agent.id,AGENTS[i+1].id)}/>}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* ── 로그 패널 ── */}
+            {/* Awaiting 배너 */}
+            {phase==='awaiting'&&(
+              <div className="await-banner">
+                <div className="await-spinner"/>
+                <div className="await-text">
+                  <p>⚡ 실제 Claude AI + Tavily 분석 결과 수신 대기 중</p>
+                  <small>{awaitMsg}</small>
+                </div>
+                <div style={{textAlign:'right',fontSize:11,color:'var(--muted)'}}>
+                  <div>Demo 데이터 표시 중</div>
+                  <div style={{color:'var(--accent)'}}>실제 결과 도착 시 자동 교체</div>
+                </div>
+              </div>
+            )}
+
+            {/* 로그 패널 */}
             <div className="log-section">
               <div className="section-label">📡 실시간 에이전트 활동 로그</div>
               <div className="log-panel">
@@ -1107,44 +1290,70 @@ function App() {
                   <div className="log-dot" style={{background:'#f59e0b'}}/>
                   <div className="log-dot" style={{background:'#22c55e'}}/>
                   <span style={{marginLeft:6}}>agent-console</span>
-                  <span style={{marginLeft:'auto', color:'#22c55e', fontSize:11}}>
-                    {phase==='running'?'● 실행 중':'● 완료'}
+                  <span style={{marginLeft:'auto',color:isRunning?'var(--yellow)':'var(--green)',fontSize:11}}>
+                    {isRunning?'● 실행 중':'● 완료'}
                   </span>
                 </div>
                 <div className="log-body" ref={logRef}>
-                  {logs.length === 0 && (
-                    <span style={{color:'#334155'}}>에이전트 시작 대기 중...<span className="log-cursor">_</span></span>
+                  {logs.length===0&&(
+                    <span style={{color:'#334155'}}>대기 중...<span className="log-cursor">_</span></span>
                   )}
                   {logs.map(entry=><LogLine key={entry.id} entry={entry}/>)}
-                  {phase==='running'&&(
-                    <span style={{color:'#334155'}}><span className="log-cursor">_</span></span>
-                  )}
+                  {isRunning&&<span style={{color:'#334155'}}><span className="log-cursor">_</span></span>}
                 </div>
               </div>
             </div>
 
-            {/* ── 결과 섹션 ── */}
-            {(results.research || results.ideation || results.validation || results.prd) && (
+            {/* 결과 섹션 */}
+            {(results.research||results.ideation||results.validation||results.prd)&&(
               <div>
-                <div className="section-label">📊 분석 결과</div>
+                <div className="section-label" style={{alignItems:'center'}}>
+                  📊 분석 결과
+                  {dataBadge}
+                </div>
+
+                {/* 실제 AI 데이터 교체 알림 */}
+                {realUpdated&&(
+                  <div style={{
+                    display:'flex',alignItems:'center',gap:10,
+                    background:'rgba(34,197,94,.15)', border:'1.5px solid var(--green)',
+                    borderRadius:10, padding:'12px 18px', marginBottom:16,
+                    animation:'fadeInUp .4s ease',
+                  }}>
+                    <span style={{fontSize:20}}>🎯</span>
+                    <div>
+                      <p style={{fontWeight:700,color:'#4ade80',fontSize:13,margin:0}}>
+                        실제 AI 분석 완료! Demo → Real AI 데이터로 자동 교체됨
+                      </p>
+                      <p style={{fontSize:11,color:'var(--muted)',margin:'2px 0 0'}}>
+                        Claude AI + Tavily 웹 검색으로 생성된 실제 결과입니다
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="results-section">
-                  {results.research && (
-                    <ResultCard icon="🔎" title="1단계: 시장 조사 결과" accentColor="#3b82f6">
+                  {results.research&&(
+                    <ResultCard icon="🔎" title="1단계: 시장 조사 결과" accentColor="#3b82f6"
+                      isReal={dataSource==='real'}>
                       <ResearchResult data={results.research}/>
                     </ResultCard>
                   )}
-                  {results.ideation && (
-                    <ResultCard icon="💡" title="2단계: 제품 컨셉 3가지" accentColor="#a855f7">
+                  {results.ideation&&(
+                    <ResultCard icon="💡" title="2단계: 제품 컨셉 3가지" accentColor="#a855f7"
+                      isReal={dataSource==='real'}>
                       <IdeationResult data={results.ideation}/>
                     </ResultCard>
                   )}
-                  {results.validation && (
-                    <ResultCard icon="✅" title="3단계: 검증 결과" accentColor="#f59e0b">
+                  {results.validation&&(
+                    <ResultCard icon="✅" title="3단계: 검증 결과" accentColor="#f59e0b"
+                      isReal={dataSource==='real'}>
                       <ValidationResult data={results.validation}/>
                     </ResultCard>
                   )}
-                  {results.prd && (
-                    <ResultCard icon="📄" title="4단계: PRD 문서 (제품 요구사항 정의서)" accentColor="#22c55e">
+                  {results.prd&&(
+                    <ResultCard icon="📄" title="4단계: PRD 문서 (제품 요구사항 정의서)" accentColor="#22c55e"
+                      isReal={dataSource==='real'}>
                       <PRDResult data={results.prd}/>
                     </ResultCard>
                   )}
@@ -1154,8 +1363,8 @@ function App() {
           </>
         )}
 
-        {/* ── 빈 상태 ── */}
-        {phase === 'idle' && (
+        {/* 빈 상태 */}
+        {phase==='idle'&&(
           <div className="empty-state">
             <div className="empty-icon">🤖</div>
             <div className="empty-title">AI 에이전트 준비 완료</div>
@@ -1164,12 +1373,12 @@ function App() {
               <span style={{color:'var(--accent)'}}>시장조사 → 아이디어 기획 → 검증 → PRD 작성</span>까지<br/>
               4단계 AI 에이전트가 자동으로 수행합니다
             </p>
-            <div style={{marginTop:24, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap'}}>
-              {['🔎 실시간 웹 검색 (Tavily)','💡 Claude AI 기획','✅ 리스크 검증','📄 PRD 자동 생성'].map(t=>(
+            <div style={{marginTop:24,display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
+              {['🎭 Demo — 즉시 실행 (API키 불필요)','⚡ Live — 실제 Claude AI + Tavily 검색'].map(t=>(
                 <span key={t} style={{
-                  padding:'6px 14px', background:'var(--surface2)',
-                  border:'1px solid var(--border)', borderRadius:20,
-                  fontSize:12, color:'var(--muted)'
+                  padding:'7px 16px',background:'var(--surface2)',
+                  border:'1px solid var(--border)',borderRadius:20,
+                  fontSize:12,color:'var(--muted)'
                 }}>{t}</span>
               ))}
             </div>
