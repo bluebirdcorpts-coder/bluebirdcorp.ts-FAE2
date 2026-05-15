@@ -42,6 +42,9 @@ dist/
 build/
 *.egg-info/
 
+# Google Service Account (never commit real credentials)
+credentials/*.json
+
 # OS
 .DS_Store
 Thumbs.db

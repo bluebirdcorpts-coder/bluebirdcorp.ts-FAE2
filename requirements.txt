@@ -25,6 +25,17 @@ aiosqlite==0.20.0
 celery==5.4.0
 redis==5.2.1
 
+# Scheduling
+apscheduler==3.10.4
+
+# Web Search
+tavily-python==0.5.0
+
+# Google Sheets
+google-api-python-client==2.154.0
+google-auth==2.36.0
+google-auth-httplib2==0.2.0
+
 # HTTP Client
 httpx==0.28.1
 

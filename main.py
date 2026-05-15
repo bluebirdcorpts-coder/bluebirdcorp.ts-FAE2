@@ -5,6 +5,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging, get_logger
 from app.db.database import create_tables
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 logger = get_logger(__name__)
 
@@ -16,7 +17,9 @@ async def lifespan(app: FastAPI):
     logger.info("startup", app=settings.app_name, env=settings.app_env)
     await create_tables()
     logger.info("database.tables_ready")
+    start_scheduler()
     yield
+    stop_scheduler()
     logger.info("shutdown", app=settings.app_name)
 
 

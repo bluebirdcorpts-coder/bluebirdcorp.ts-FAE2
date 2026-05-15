@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
 
+    # Web Search
+    tavily_api_key: str = ""
+
+    # Google Sheets
+    google_service_account_file: str = "./credentials/google_service_account.json"
+    google_sheets_id: str = ""
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors(cls, v):
