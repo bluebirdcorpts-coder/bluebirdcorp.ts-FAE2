@@ -558,6 +558,17 @@ const EXAMPLE_TOPICS = [
   'B2B 물류 자동화 솔루션',
 ];
 
+// ── RFID 제안서 설정 ─────────────────────────────────────
+const RFID_INDUSTRIES = [
+  { label:'🧊 콜드체인 신선식품', value:'콜드체인 신선식품 배송', env:'냉장·냉동 창고' },
+  { label:'🏭 제조·스마트팩토리', value:'제조업 스마트팩토리',   env:'금속 혼재 공장' },
+  { label:'📦 이커머스 물류',      value:'이커머스 풀필먼트 물류', env:'대형 물류센터' },
+  { label:'🏥 의료·병원',         value:'병원 의료기기 자산 관리', env:'병원 내부' },
+  { label:'🛍️ 리테일·패션',       value:'리테일 패션 재고 관리',  env:'매장·창고' },
+  { label:'✈️ 항공·공항',         value:'항공 수하물 자산 추적',  env:'공항 옥외' },
+];
+const RFID_STAKEHOLDERS = ['임원(C-Level)','물류 CTO','SCM 팀장','IT 인프라 담당','운영 COO','구매 팀장'];
+
 // ── 데모 목 데이터 ─────────────────────────────────────────
 const MOCK = {
   research: {
@@ -928,6 +939,222 @@ function ResultCard({ icon, title, accentColor, isReal, children }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// RFID 제안서 뷰
+// ══════════════════════════════════════════════════════════════
+
+function RFIDView({ apiOnline }) {
+  const [company,    setCompany]    = useState('');
+  const [industry,   setIndustry]   = useState('');
+  const [env,        setEnv]        = useState('');
+  const [stakeholder,setStakeholder]= useState('임원(C-Level)');
+  const [extra,      setExtra]      = useState('');
+  const [loading,    setLoading]    = useState(false);
+  const [result,     setResult]     = useState(null);
+  const [error,      setError]      = useState('');
+  const [searchPhase,setSearchPhase]= useState(false);
+
+  async function handleGenerate(e){
+    e.preventDefault();
+    if (!apiOnline) { setError('백엔드 서버(localhost:8000)에 연결되지 않았습니다. Live 모드로 서버를 실행하세요.'); return; }
+    setLoading(true); setError(''); setResult(null); setSearchPhase(true);
+    await sleep(800);
+    setSearchPhase(false);
+    try {
+      const res = await fetch(`${API_BASE}/rfid/proposal`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          company_name:company, industry, stakeholder,
+          environment:env||null, extra_context:extra||null,
+        }),
+      });
+      if(!res.ok){ const e2=await res.json(); throw new Error(e2.detail||`HTTP ${res.status}`); }
+      setResult(await res.json());
+    } catch(e){ setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  function downloadMd(){
+    if(!result) return;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([result.proposal],{type:'text/markdown'}));
+    a.download=`RFID_제안서_${result.company}_${new Date().toISOString().slice(0,10)}.md`;
+    a.click();
+  }
+
+  function copyMd(){
+    if(!result) return;
+    navigator.clipboard.writeText(result.proposal).then(()=>alert('클립보드에 복사되었습니다!'));
+  }
+
+  // 간단 마크다운 렌더러
+  function renderMd(text){
+    return text.split('\n').map((line,i)=>{
+      if(line.startsWith('# '))
+        return <div key={i} style={{fontSize:18,fontWeight:800,color:'#93c5fd',borderBottom:'1px solid #1e3a5f',paddingBottom:6,margin:'20px 0 10px'}}>{line.slice(2)}</div>;
+      if(line.startsWith('## '))
+        return <div key={i} style={{fontSize:15,fontWeight:700,color:'#a5b4fc',margin:'16px 0 6px'}}>{line.slice(3)}</div>;
+      if(line.startsWith('### '))
+        return <div key={i} style={{fontSize:13,fontWeight:700,color:'#c4b5fd',margin:'12px 0 4px'}}>{line.slice(4)}</div>;
+      if(line.startsWith('- ')||line.startsWith('* '))
+        return <div key={i} style={{display:'flex',gap:8,fontSize:12,color:'#cbd5e1',margin:'2px 0'}}>
+          <span style={{color:'#3b82f6',flexShrink:0}}>▸</span>
+          <span dangerouslySetInnerHTML={{__html:line.slice(2).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}}/>
+        </div>;
+      if(/^\d+\. /.test(line))
+        return <div key={i} style={{display:'flex',gap:8,fontSize:12,color:'#cbd5e1',margin:'2px 0'}}>
+          <span style={{color:'#6366f1',fontWeight:700,minWidth:18,flexShrink:0}}>{line.match(/^(\d+)/)[1]}.</span>
+          <span dangerouslySetInnerHTML={{__html:line.replace(/^\d+\. /,'').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}}/>
+        </div>;
+      if(line.startsWith('---'))
+        return <hr key={i} style={{border:'none',borderTop:'1px solid #1e3a5f',margin:'12px 0'}}/>;
+      if(line.startsWith('|'))
+        return <div key={i} style={{fontSize:11,color:'#94a3b8',fontFamily:'monospace',padding:'1px 6px',background:'#0a0f1e',borderLeft:'2px solid #1e3a5f'}}>{line}</div>;
+      if(!line.trim()) return <div key={i} style={{height:5}}/>;
+      return <p key={i} style={{fontSize:12,color:'#cbd5e1',lineHeight:1.7,margin:'2px 0'}}
+        dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.+?)\*\*/g,'<strong style="color:#e2e8f0">$1</strong>').replace(/`(.+?)`/g,'<code style="background:#0a0f1e;padding:1px 4px;border-radius:3px;font-size:10px;color:#86efac">$1</code>')}}/>;
+    });
+  }
+
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'360px 1fr',gap:24,alignItems:'start'}}>
+      {/* 입력 패널 */}
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:22}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:18}}>
+          <span style={{fontSize:20}}>📡</span>
+          <div>
+            <p style={{fontWeight:700,fontSize:14,margin:0}}>RFID 제안서 자동 생성</p>
+            <p style={{fontSize:11,color:'var(--muted)',margin:'2px 0 0'}}>Tavily 검색 + Claude AI 작성</p>
+          </div>
+        </div>
+
+        {!apiOnline&&(
+          <div style={{background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.3)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'var(--yellow)',marginBottom:14}}>
+            ⚠ 백엔드 서버 미연결 — localhost:8000 실행 필요
+          </div>
+        )}
+
+        <form onSubmit={handleGenerate} style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:'var(--muted)',display:'block',marginBottom:5}}>고객사명 *</label>
+            <input style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',outline:'none'}}
+              value={company} onChange={e=>setCompany(e.target.value)} placeholder="예: 쿠팡물류, OO제약" required/>
+          </div>
+
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:'var(--muted)',display:'block',marginBottom:5}}>산업군 *</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:6}}>
+              {RFID_INDUSTRIES.map(p=>(
+                <button key={p.value} type="button"
+                  onClick={()=>{setIndustry(p.value);setEnv(p.env);}}
+                  style={{padding:'3px 10px',borderRadius:20,border:'1px solid',fontSize:10,cursor:'pointer',transition:'all .15s',
+                    borderColor:industry===p.value?'var(--accent)':'var(--border)',
+                    background:industry===p.value?'rgba(59,130,246,.15)':'transparent',
+                    color:industry===p.value?'#93c5fd':'var(--muted)',fontWeight:industry===p.value?700:400}}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <input style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',outline:'none'}}
+              value={industry} onChange={e=>setIndustry(e.target.value)} placeholder="직접 입력..." required/>
+          </div>
+
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:'var(--muted)',display:'block',marginBottom:5}}>도입 환경</label>
+            <input style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',outline:'none'}}
+              value={env} onChange={e=>setEnv(e.target.value)} placeholder="예: 금속 혼재 창고, 냉장·냉동"/>
+          </div>
+
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:'var(--muted)',display:'block',marginBottom:5}}>대상 의사결정자</label>
+            <select style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',outline:'none'}}
+              value={stakeholder} onChange={e=>setStakeholder(e.target.value)}>
+              {RFID_STAKEHOLDERS.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:'var(--muted)',display:'block',marginBottom:5}}>추가 정보 (선택)</label>
+            <textarea style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--text)',outline:'none',resize:'none'}}
+              rows={3} value={extra} onChange={e=>setExtra(e.target.value)}
+              placeholder="예: 현재 바코드 사용 중, 월 5만 건 처리, 오인식 문제..."/>
+          </div>
+
+          {error&&<div style={{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:12,color:' var(--red)'}}>{error}</div>}
+
+          <button type="submit" disabled={loading}
+            style={{padding:'12px',borderRadius:10,border:'none',cursor:loading?'not-allowed':'pointer',
+              background:loading?'#1e3a8a':'linear-gradient(135deg, #2563eb, #4f46e5)',
+              color:'#fff',fontWeight:700,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            {loading?(
+              <><span style={{animation:'spin .8s linear infinite',display:'inline-block'}}>⚙</span>
+              {searchPhase?'Tavily 검색 중...':'Claude AI 제안서 작성 중...'}</>
+            ):'📡 RFID 제안서 생성'}
+          </button>
+        </form>
+      </div>
+
+      {/* 결과 패널 */}
+      <div>
+        {loading&&(
+          <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:60,textAlign:'center'}}>
+            <div style={{width:44,height:44,border:'3px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 16px'}}/>
+            <p style={{fontWeight:700,color:'var(--accent)',margin:'0 0 8px'}}>
+              {searchPhase?'🔎 Tavily — 실시간 웹 검색 중...':'🤖 Claude AI — 제안서 작성 중...'}
+            </p>
+            <p style={{fontSize:12,color:'var(--muted)',margin:0}}>
+              {searchPhase?'고객사·업종·경쟁사 3개 쿼리 병렬 검색':'검색 결과 + 블루버드 강점 기반 맞춤 제안서 생성 (30~60초)'}
+            </p>
+          </div>
+        )}
+
+        {!loading&&!result&&(
+          <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:60,textAlign:'center',color:'var(--muted)'}}>
+            <div style={{fontSize:48,marginBottom:12,opacity:.3}}>📋</div>
+            <p style={{fontWeight:700,fontSize:15,margin:'0 0 8px',color:'#475569'}}>맞춤형 RFID 제안서</p>
+            <p style={{fontSize:12}}>고객사 정보 입력 후 생성 버튼을 클릭하세요</p>
+          </div>
+        )}
+
+        {result&&!loading&&(
+          <div>
+            {/* 메타 헤더 */}
+            <div style={{background:'var(--surface)',border:'1px solid var(--green)',borderRadius:'var(--radius)',padding:'14px 18px',marginBottom:16,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:'var(--green)',fontWeight:700,marginBottom:3}}>● 제안서 생성 완료</div>
+                <p style={{fontWeight:800,fontSize:15,color:'var(--text)',margin:0}}>{result.company} — {result.industry}</p>
+                <p style={{fontSize:11,color:'var(--muted)',margin:'3px 0 0'}}>대상: {result.stakeholder} | 참조: {result.search_sources?.length||0}건 웹 검색</p>
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={copyMd} style={{padding:'7px 14px',border:'1px solid var(--border)',borderRadius:8,background:'var(--surface2)',color:'var(--text)',fontSize:12,fontWeight:600,cursor:'pointer'}}>📋 복사</button>
+                <button onClick={downloadMd} style={{padding:'7px 14px',border:'none',borderRadius:8,background:'var(--accent)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'}}>⬇ .md</button>
+              </div>
+            </div>
+
+            {/* 제안서 본문 */}
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'20px 24px'}}>
+              {renderMd(result.proposal)}
+            </div>
+
+            {/* 출처 */}
+            {result.search_sources?.length>0&&(
+              <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'14px 18px',marginTop:12}}>
+                <p style={{fontSize:12,fontWeight:700,color:'var(--muted)',marginBottom:10}}>🔎 Tavily 웹 검색 출처</p>
+                {result.search_sources.map((s,i)=>(
+                  <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
+                    style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',fontSize:11,color:'var(--accent)',textDecoration:'none',borderBottom:'1px solid var(--border)'}}>
+                    <span>↗</span><span>{s.title||s.url}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
 // 셋업 가이드 컴포넌트
 // ══════════════════════════════════════════════════════════════
 
@@ -996,6 +1223,7 @@ uvicorn main:app --reload --port 8000</code>
 // ══════════════════════════════════════════════════════════════
 
 function App() {
+  const [appView,     setAppView]     = useState('planner'); // 'planner' | 'rfid'
   const [topic,       setTopic]       = useState('');
   const [mode,        setMode]        = useState('demo');
   const [apiOnline,   setApiOnline]   = useState(false);
@@ -1195,15 +1423,24 @@ function App() {
             <p>AI 상품기획 대시보드 — 4-Agent Pipeline</p>
           </div>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+          {/* 앱 탭 */}
           <div className="mode-toggle">
-            <button className={`mode-btn ${mode==='demo'?'active':''}`} onClick={()=>!isRunning&&setMode('demo')}>
-              🎭 Demo
+            <button className={`mode-btn ${appView==='planner'?'active':''}`} onClick={()=>setAppView('planner')}>
+              🤖 상품기획 AI
             </button>
-            <button className={`mode-btn ${mode==='live'?'active':''}`} onClick={()=>!isRunning&&setMode('live')}>
-              ⚡ Live
+            <button className={`mode-btn ${appView==='rfid'?'active':''}`} onClick={()=>setAppView('rfid')}
+              style={{borderLeft:'1px solid rgba(255,255,255,.1)'}}>
+              📡 RFID 제안서
             </button>
           </div>
+          {/* 모드 (상품기획만 해당) */}
+          {appView==='planner'&&(
+            <div className="mode-toggle">
+              <button className={`mode-btn ${mode==='demo'?'active':''}`} onClick={()=>!isRunning&&setMode('demo')}>🎭 Demo</button>
+              <button className={`mode-btn ${mode==='live'?'active':''}`} onClick={()=>!isRunning&&setMode('live')}>⚡ Live</button>
+            </div>
+          )}
           <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--muted)'}}>
             <div className={`status-dot ${apiOnline?'online':''}`}/>
             <span>{apiOnline?'API 연결됨':'API 오프라인'}</span>
@@ -1212,6 +1449,11 @@ function App() {
       </header>
 
       <div className="main">
+        {/* ── RFID 제안서 탭 ── */}
+        {appView==='rfid'&&<RFIDView apiOnline={apiOnline}/>}
+
+        {/* ── 상품기획 AI 탭 ── */}
+        {appView==='planner'&&<>
         {/* ── Live 모드 셋업 가이드 ── */}
         {mode==='live'&&!apiOnline&&phase==='idle'&&<SetupGuide/>}
 
@@ -1384,6 +1626,7 @@ function App() {
             </div>
           </div>
         )}
+        </>{/* end planner tab */}
       </div>
     </div>
   );

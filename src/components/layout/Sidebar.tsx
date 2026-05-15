@@ -11,15 +11,17 @@ import {
   Bird,
   SearchCheck,
   TrendingUp,
+  Wifi,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/ts-dashboard", label: "TS Strategy", icon: TrendingUp, highlight: true },
-  { href: "/research", label: "AI Research", icon: SearchCheck },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/analyze", label: "AI Analyze", icon: BrainCircuit },
-  { href: "/tasks", label: "Tasks", icon: ClipboardList },
+  { href: "/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
+  { href: "/ts-dashboard",  label: "TS Strategy",   icon: TrendingUp,  highlight: true },
+  { href: "/rfid-proposal", label: "RFID 제안서",    icon: Wifi,        highlight: true },
+  { href: "/research",      label: "AI Research",   icon: SearchCheck },
+  { href: "/products",      label: "Products",      icon: Package },
+  { href: "/analyze",       label: "AI Analyze",    icon: BrainCircuit },
+  { href: "/tasks",         label: "Tasks",         icon: ClipboardList },
 ];
 
 export default function Sidebar() {
